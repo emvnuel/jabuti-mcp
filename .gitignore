@@ -1,0 +1,11 @@
+# Real configuration with credentials must never be committed.
+datasources.yaml
+datasources.docker.yaml
+
+target/
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

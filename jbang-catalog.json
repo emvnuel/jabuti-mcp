@@ -1,0 +1,8 @@
+{
+  "aliases": {
+    "jabuti": {
+      "script-ref": "https://github.com/emanuelcerqueira/jabuti-mcp/releases/latest/download/jabuti-mcp.jar",
+      "java": "25+"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+drivers:
+  - id: postgres-jdbc
+    className: org.postgresql.Driver
+    maven: [{ groupId: org.postgresql, artifactId: postgresql, version: "42.7.14" }]
+  - id: mysql-jdbc
+    className: com.mysql.cj.jdbc.Driver
+    maven: [{ groupId: com.mysql, artifactId: mysql-connector-j, version: "26.7.0" }]
+  - id: mariadb-jdbc
+    className: org.mariadb.jdbc.Driver
+    maven: [{ groupId: org.mariadb.jdbc, artifactId: mariadb-java-client, version: "3.5.9" }]
+  - id: sqlite-jdbc
+    className: org.sqlite.JDBC
+    maven: [{ groupId: org.xerial, artifactId: sqlite-jdbc, version: "3.47.2.0" }]
+  - id: mssql-jdbc
+    className: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    maven: [{ groupId: com.microsoft.sqlserver, artifactId: mssql-jdbc, version: "13.2.0.jre11" }]
+  - id: oracle-jdbc
+    className: oracle.jdbc.OracleDriver
+    maven: [{ groupId: com.oracle.database.jdbc, artifactId: ojdbc11, version: "23.7.0.25.01" }]
+  - id: hsqldb-jdbc
+    className: org.hsqldb.jdbc.JDBCDriver
+    maven: [{ groupId: org.hsqldb, artifactId: hsqldb, version: "2.7.4" }]
+  - id: derby-jdbc
+    className: org.apache.derby.jdbc.EmbeddedDriver
+    maven: [{ groupId: org.apache.derby, artifactId: derby, version: "10.17.1.0" }]
+  - id: firebird-jdbc
+    className: org.firebirdsql.jdbc.FBDriver
+    maven: [{ groupId: org.firebirdsql.jdbc, artifactId: jaybird, version: "6.0.7" }]
+  - id: hana-jdbc
+    className: com.sap.db.jdbc.Driver
+    maven: [{ groupId: com.sap.cloud.db.jdbc, artifactId: ngdbc, version: "2.30.11" }]
+  - id: informix-jdbc
+    className: com.informix.jdbc.IfxDriver
+    maven: [{ groupId: com.ibm.informix, artifactId: jdbc, version: "15.0.1.4" }]
+  - id: duckdb-jdbc
+    className: org.duckdb.DuckDBDriver
+    maven: [{ groupId: org.duckdb, artifactId: duckdb_jdbc, version: "1.5.6.0" }]

@@ -1,0 +1,10 @@
+target/
+.git/
+.settings/
+.idea/
+*.iml
+datasources.yaml
+datasources.docker.yaml
+CONTEXT.md
+README.md
+datasources.yaml.example

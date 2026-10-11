@@ -22,12 +22,12 @@ an isolated class loader and opens one HikariCP pool per source.
 Once a release is published (the release workflow does this on a `v*` tag):
 
 ```bash
-jbang jabuti@emanuelcerqueira/jabuti-mcp --config=/absolute/path/to/datasources.yaml
+jbang jabuti@emvnuel/jabuti-mcp --config=/absolute/path/to/datasources.yaml
 ```
 
 jbang downloads the single-file jar from the latest GitHub release and, if
 needed, a matching JDK. The Claude Desktop config below works the same way with
-`"command": "jbang"` and `"args": ["jabuti@emanuelcerqueira/jabuti-mcp", "--config=/absolute/path/to/datasources.yaml"]`.
+`"command": "jbang"` and `"args": ["jabuti@emvnuel/jabuti-mcp", "--config=/absolute/path/to/datasources.yaml"]`.
 
 ## Configuration
 

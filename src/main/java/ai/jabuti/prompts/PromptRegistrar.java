@@ -10,7 +10,6 @@ import ai.jabuti.tools.ToolNames;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
-import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -32,8 +31,11 @@ public class PromptRegistrar {
         this.datasourceManager = datasourceManager;
     }
 
-    @Startup
-    void registerAll() {
+    /**
+     * Registers the prompts; invoked by {@link ai.jabuti.McpBootstrapper}
+     * before the stdio transport starts serving requests.
+     */
+    public void registerAll() {
         registerExploreDatabase();
         registerErDiagram();
     }

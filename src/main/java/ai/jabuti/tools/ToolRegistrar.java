@@ -11,7 +11,6 @@ import ai.jabuti.config.ToolEntry;
 import ai.jabuti.datasource.DatasourceManager;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.ToolManager;
-import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -53,8 +52,11 @@ public class ToolRegistrar {
         this.databaseInfoHandler = databaseInfoHandler;
     }
 
-    @Startup
-    void registerAll() {
+    /**
+     * Registers every configured tool; invoked by {@link ai.jabuti.McpBootstrapper}
+     * before the stdio transport starts serving requests.
+     */
+    public void registerAll() {
         JdbcMcpConfig config = datasourceManager.config();
         boolean singleSource = config.sources().size() == 1;
         List<ToolEntry> tools = config.tools().isEmpty() ? defaultTools(config) : config.tools();

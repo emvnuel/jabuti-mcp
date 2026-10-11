@@ -175,7 +175,8 @@ way.
 Docker is an optional alternative to the host Java install: the image carries
 its own JRE, so a machine running the server needs neither Java 25 nor Maven.
 The container speaks MCP over stdio — run it with `-i`, never `-t` (a TTY
-corrupts the JSON-RPC stream).
+corrupts the JSON-RPC stream). Release images published to ghcr.io are
+multi-arch (`linux/amd64` and `linux/arm64`).
 
 ### Build
 

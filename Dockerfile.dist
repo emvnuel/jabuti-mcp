@@ -1,0 +1,15 @@
+# Release image: copies the prebuilt uber-jar (built natively by the release
+# workflow) instead of running Maven inside the build, so the multi-arch
+# (linux/amd64 + linux/arm64) build does not run Maven under QEMU.
+# For a self-contained local build use the root Dockerfile instead.
+FROM eclipse-temurin:25-jre
+# Pre-create the driver cache so a fresh named volume mounted here inherits
+# uid 10001 and stays writable by the unprivileged user.
+RUN useradd -m -u 10001 jabuti \
+    && install -d -o jabuti -g jabuti /home/jabuti/.jabuti
+WORKDIR /deployments
+COPY jabuti-mcp.jar /deployments/jabuti-mcp.jar
+ENV JABUTI_CONFIG=/config/datasources.yaml \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
+USER jabuti
+ENTRYPOINT ["java", "-jar", "/deployments/jabuti-mcp.jar"]

@@ -31,5 +31,23 @@ class ToolEnvelopeTest {
         assertEquals("Read-only mode is enabled", json.get("error").asText());
         assertEquals("READONLY_VIOLATION", json.get("code").asText());
         assertFalse(json.has("data"));
+        assertFalse(json.has("hint"));
+    }
+
+    @Test
+    void errorWithHintIncludesHint() throws Exception {
+        JsonNode json = mapper.readTree(
+                ToolEnvelope.error("Unknown schema", "SCHEMA_NOT_FOUND", "Call search_objects first"));
+
+        assertFalse(json.get("success").asBoolean());
+        assertEquals("Unknown schema", json.get("error").asText());
+        assertEquals("SCHEMA_NOT_FOUND", json.get("code").asText());
+        assertEquals("Call search_objects first", json.get("hint").asText());
+    }
+
+    @Test
+    void errorWithBlankHintOmitsHintKey() throws Exception {
+        assertFalse(mapper.readTree(ToolEnvelope.error("m", "INVALID_INPUT", null)).has("hint"));
+        assertFalse(mapper.readTree(ToolEnvelope.error("m", "INVALID_INPUT", "  ")).has("hint"));
     }
 }

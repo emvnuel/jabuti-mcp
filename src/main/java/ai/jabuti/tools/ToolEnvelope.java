@@ -10,12 +10,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Every tool handler returns one of these JSON envelopes (mirrors dbhub's
  * {@code createToolSuccessResponse}/{@code createToolErrorResponse} payloads):
  * {@code {"success":true,"data":{...}}} or
- * {@code {"success":false,"error":"...","code":"..."}}.
+ * {@code {"success":false,"error":"...","code":"..."}}. Error envelopes may
+ * carry an optional machine-readable {@code hint} (the exact next call a
+ * weak LLM client should try), serialized only when non-null and non-blank.
  */
 public final class ToolEnvelope {
 
     public static final String CODE_READONLY_VIOLATION = "READONLY_VIOLATION";
-    public static final String CODE_SCHEMA_REQUIRED = "SCHEMA_REQUIRED";
     public static final String CODE_INVALID_TABLE_FILTER = "INVALID_TABLE_FILTER";
     public static final String CODE_SCHEMA_NOT_FOUND = "SCHEMA_NOT_FOUND";
     public static final String CODE_INVALID_OBJECT_TYPE = "INVALID_OBJECT_TYPE";
@@ -49,6 +50,22 @@ public final class ToolEnvelope {
         envelope.put("success", false);
         envelope.put("error", message);
         envelope.put("code", code);
+        return toJson(envelope);
+    }
+
+    /**
+     * Error envelope with an optional machine-readable {@code hint}. The
+     * {@code "hint"} key is included only when the hint is non-null and
+     * non-blank, placed after {@code "code"}.
+     */
+    public static String error(String message, String code, String hint) {
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("success", false);
+        envelope.put("error", message);
+        envelope.put("code", code);
+        if (hint != null && !hint.isBlank()) {
+            envelope.put("hint", hint);
+        }
         return toJson(envelope);
     }
 

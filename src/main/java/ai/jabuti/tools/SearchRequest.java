@@ -21,28 +21,26 @@ record SearchRequest(String objectType, String pattern, String schema, String ta
         String effectiveTable = blankToNull(table);
         String effectiveSchema = blankToNull(schema);
         validateObjectType(objectType);
-        validateTableFilter(objectType, effectiveSchema, effectiveTable);
+        validateTableFilter(objectType, effectiveTable);
         return new SearchRequest(objectType, effectivePattern(pattern), effectiveSchema, effectiveTable,
                 validatedDetailLevel(detailLevel), validatedLimit(limit));
     }
 
     private static void validateObjectType(String objectType) {
         if (objectType == null || !OBJECT_TYPES.contains(objectType)) {
-            throw new ToolError("Unsupported object_type: " + objectType, ToolEnvelope.CODE_INVALID_OBJECT_TYPE);
+            throw new ToolError("Unsupported object_type: " + objectType, ToolEnvelope.CODE_INVALID_OBJECT_TYPE,
+                    "Use one of: schema, table, view, column, procedure, function, index");
         }
     }
 
-    private static void validateTableFilter(String objectType, String schema, String table) {
+    private static void validateTableFilter(String objectType, String table) {
         if (table == null) {
             return;
         }
-        if (schema == null) {
-            throw new ToolError("The 'table' parameter requires 'schema' to be specified",
-                    ToolEnvelope.CODE_SCHEMA_REQUIRED);
-        }
         if (!objectType.equals("column") && !objectType.equals("index")) {
             throw new ToolError("The 'table' parameter only applies to object_type 'column' or 'index', not '"
-                    + objectType + "'", ToolEnvelope.CODE_INVALID_TABLE_FILTER);
+                    + objectType + "'", ToolEnvelope.CODE_INVALID_TABLE_FILTER,
+                    "Use object_type 'column' or 'index', or drop the 'table' filter");
         }
     }
 
@@ -53,7 +51,8 @@ record SearchRequest(String objectType, String pattern, String schema, String ta
     private static String validatedDetailLevel(String detailLevel) {
         String effective = blankToNull(detailLevel) == null ? "names" : detailLevel;
         if (!DETAIL_LEVELS.contains(effective)) {
-            throw new ToolError("Invalid detail_level: " + detailLevel, ToolEnvelope.CODE_INVALID_INPUT);
+            throw new ToolError("Invalid detail_level: " + detailLevel, ToolEnvelope.CODE_INVALID_INPUT,
+                    "Use one of: names, summary, full");
         }
         return effective;
     }

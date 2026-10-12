@@ -11,6 +11,8 @@ import io.quarkiverse.mcp.server.ToolResponse;
  * {@link ToolEnvelope} inside an MCP {@link ToolResponse}. A failed envelope
  * is returned through {@link ToolResponse#error(String)} so clients also see
  * {@code isError: true}, not just the envelope's {@code success: false}.
+ * An expected error's optional hint flows through to the envelope; unexpected
+ * failures carry no hint.
  */
 public final class ToolCalls {
 
@@ -21,7 +23,7 @@ public final class ToolCalls {
         try {
             return ToolResponse.success(ToolEnvelope.success(work.get()));
         } catch (ToolError e) {
-            return ToolResponse.error(ToolEnvelope.error(e.getMessage(), e.code()));
+            return ToolResponse.error(ToolEnvelope.error(e.getMessage(), e.code(), e.hint()));
         } catch (RuntimeException e) {
             return ToolResponse.error(ToolEnvelope.error(e, defaultFailureCode));
         }

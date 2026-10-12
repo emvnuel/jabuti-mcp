@@ -24,7 +24,8 @@ _Avoid_: object kind, entity type
 
 **Detail level**:
 How much of each found object a search returns: `names` (name and context
-only), `summary` (counts and types), `full` (columns, indexes, row counts).
+only), `summary` (counts and column material), `full` (summary plus index
+material).
 _Avoid_: verbosity, depth
 
 **Statement**:

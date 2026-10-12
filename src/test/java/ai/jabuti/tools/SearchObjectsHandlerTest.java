@@ -2,9 +2,11 @@ package ai.jabuti.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +35,10 @@ class SearchObjectsHandlerTest {
         handler = new SearchObjectsHandler(datasources, metadata, objectSearch, List.of(
                 new FakeScanner("table", List.of(
                         new ObjectSearcher.ObjectItem("customers", Map.of("schema", "PUBLIC"),
-                                () -> Map.of("column_count", 2))))));
+                                () -> Map.of("column_count", 2)))),
+                new FakeScanner("column", List.of(
+                        new ObjectSearcher.ObjectItem("id", Map.of("schema", "PUBLIC", "table", "items"),
+                                () -> Map.of())))));
     }
 
     @AfterEach
@@ -50,11 +55,13 @@ class SearchObjectsHandlerTest {
     }
 
     @Test
-    void tableFilterRequiresSchema() {
-        ToolError error = assertThrows(ToolError.class,
-                () -> handler.search("h2db", "column", null, null, "items", null, null));
+    void tableFilterWithoutSchemaDispatches() {
+        Map<String, Object> data = handler.search("h2db", "column", null, null, "items", null, null);
 
-        assertEquals(ToolEnvelope.CODE_SCHEMA_REQUIRED, error.code());
+        assertEquals("column", data.get("object_type"));
+        assertEquals("items", data.get("table"));
+        assertNull(data.get("schema"));
+        assertTrue((Integer) data.get("count") >= 1, data.toString());
     }
 
     @Test
@@ -82,6 +89,8 @@ class SearchObjectsHandlerTest {
 
         assertEquals(ToolEnvelope.CODE_SCHEMA_NOT_FOUND, error.code());
         assertTrue(error.getMessage().contains("PUBLIC"), error.getMessage());
+        assertTrue(error.getMessage().startsWith("Schema 'nope' does not exist. Available schemas: "),
+                error.getMessage());
     }
 
     @Test
@@ -118,6 +127,61 @@ class SearchObjectsHandlerTest {
 
         Map<String, Object> belowLimit = handler.search("h2db", "table", null, "PUBLIC", null, null, 2);
         assertEquals(Boolean.FALSE, belowLimit.get("truncated"));
+    }
+
+    @Test
+    void schemaResolutionHelper() {
+        assertEquals(SearchObjectsHandler.SchemaResolution.USE_DEFAULT_SCOPE,
+                SearchObjectsHandler.resolveSchema(List.of(), "public"));
+        assertEquals(SearchObjectsHandler.SchemaResolution.USE_REQUESTED,
+                SearchObjectsHandler.resolveSchema(List.of("PUBLIC", "INFORMATION_SCHEMA"), "PUBLIC"));
+        assertEquals(SearchObjectsHandler.SchemaResolution.SCHEMA_NOT_FOUND,
+                SearchObjectsHandler.resolveSchema(List.of("PUBLIC", "INFORMATION_SCHEMA"), "nope"));
+    }
+
+    @Test
+    void requestedSchemaIgnoredOnSchemelessEngine() {
+        SearchObjectsHandler schemaless = schemalessHandler();
+
+        Map<String, Object> data = schemaless.search("h2db", "table", null, "public", null, null, null);
+
+        assertNull(data.get("schema"), data.toString());
+        assertTrue((Integer) data.get("count") >= 1, data.toString());
+        List<?> notes = (List<?>) data.get("notes");
+        assertTrue(notes != null
+                && notes.contains("database has no schema concept; 'schema' parameter ignored"),
+                data.toString());
+    }
+
+    @Test
+    void schemaObjectTypeOnSchemelessEngineExplainsEmpty() {
+        SearchObjectsHandler schemaless = schemalessHandler();
+
+        Map<String, Object> data = schemaless.search("h2db", "schema", null, null, null, null, null);
+
+        assertEquals(0, data.get("count"));
+        assertEquals(List.of(), data.get("results"));
+        List<?> notes = (List<?>) data.get("notes");
+        assertTrue(notes != null && notes.stream().anyMatch(note -> note.toString().contains("no schema concept")),
+                data.toString());
+    }
+
+    private SearchObjectsHandler schemalessHandler() {
+        MetadataService schemaless = new MetadataService(datasources) {
+            @Override
+            public List<String> getSchemas(String sourceId) {
+                return List.of();
+            }
+
+            @Override
+            public List<String> defaultSchemas(String sourceId) {
+                return Collections.singletonList(null);
+            }
+        };
+        return new SearchObjectsHandler(datasources, schemaless, new ObjectSearch(schemaless), List.of(
+                new FakeScanner("table", List.of(
+                        new ObjectSearcher.ObjectItem("t", Map.of(), () -> Map.of()))),
+                new SchemaScanner(schemaless)));
     }
 
     private record FakeScanner(String objectType, List<ObjectSearcher.ObjectItem> items)

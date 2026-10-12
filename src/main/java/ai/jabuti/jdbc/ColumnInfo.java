@@ -29,4 +29,16 @@ public record ColumnInfo(String column_name, String data_type, String is_nullabl
         payload.putAll(details());
         return payload;
     }
+
+    /**
+     * The column's light wire shape for table summaries ({@code name} and
+     * {@code type} only), keeping summary payloads small; {@link #toPayload()}
+     * carries the full detail.
+     */
+    public Map<String, Object> toSummaryPayload() {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("name", column_name);
+        payload.put("type", data_type);
+        return payload;
+    }
 }

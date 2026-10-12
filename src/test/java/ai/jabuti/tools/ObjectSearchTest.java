@@ -2,14 +2,17 @@ package ai.jabuti.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ai.jabuti.datasource.DatasourceManager;
+import ai.jabuti.jdbc.ColumnInfo;
 import ai.jabuti.jdbc.MetadataService;
 import ai.jabuti.jdbc.QueryExecutor;
 import ai.jabuti.testsupport.H2Sources;
@@ -153,6 +156,7 @@ class ObjectSearchTest {
         assertEquals("PUBLIC", customers.get("schema"));
         assertFalse(customers.containsKey("column_count"), customers.toString());
         assertFalse(customers.containsKey("row_count"), customers.toString());
+        assertFalse(customers.containsKey("columns"), customers.toString());
     }
 
     @Test
@@ -161,6 +165,37 @@ class ObjectSearchTest {
 
         assertEquals(2, customers.get("column_count"));
         assertEquals(2, customers.get("row_count"));
+        List<Map<String, Object>> columnPayloads = payloads(customers.get("columns"));
+        assertEquals(2, columnPayloads.size());
+        assertTrue(columnPayloads.stream()
+                        .anyMatch(column -> "id".equalsIgnoreCase(String.valueOf(column.get("name")))),
+                columnPayloads.toString());
+        assertTrue(columnPayloads.stream()
+                        .anyMatch(column -> "name".equalsIgnoreCase(String.valueOf(column.get("name")))),
+                columnPayloads.toString());
+        for (Map<String, Object> column : columnPayloads) {
+            assertEquals(Set.of("name", "type"), column.keySet(), column.toString());
+        }
+        assertFalse(customers.containsKey("indexes"), customers.toString());
+    }
+
+    @Test
+    void tableSummaryDegradesToNullsWhenColumnMetadataFails() {
+        MetadataService failing = new MetadataService(datasources) {
+            @Override
+            public List<ColumnInfo> getColumns(String sourceId, String schema, String table) {
+                throw new IllegalStateException("metadata unavailable");
+            }
+        };
+        TableScanner scanner = new TableScanner(failing, quiet, new QueryExecutor(datasources));
+
+        List<Map<String, Object>> results = objectSearch.search("h2db",
+                SearchRequest.parse("table", "customers", "PUBLIC", null, "summary", null), scanner);
+
+        Map<String, Object> customers = findTable(results, "customers");
+        assertNull(customers.get("column_count"));
+        assertNull(customers.get("row_count"));
+        assertNull(customers.get("columns"));
     }
 
     @Test

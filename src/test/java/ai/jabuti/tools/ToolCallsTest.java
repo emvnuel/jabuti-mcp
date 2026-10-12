@@ -58,6 +58,20 @@ class ToolCallsTest {
         assertEquals(ToolEnvelope.CODE_SEARCH_ERROR, json.get("code").asText());
     }
 
+    @Test
+    void toolErrorHintSurfacesInResponse() throws Exception {
+        ToolResponse response = ToolCalls.response(ToolEnvelope.CODE_EXECUTION_ERROR, () -> {
+            throw new ToolError("nope", ToolEnvelope.CODE_READONLY_VIOLATION, "retry with read-only query");
+        });
+
+        assertTrue(response.isError());
+        JsonNode json = mapper.readTree(text(response));
+        assertFalse(json.get("success").asBoolean());
+        assertEquals("nope", json.get("error").asText());
+        assertEquals(ToolEnvelope.CODE_READONLY_VIOLATION, json.get("code").asText());
+        assertEquals("retry with read-only query", json.get("hint").asText());
+    }
+
     private static String text(ToolResponse response) {
         return ((TextContent) response.content().get(0)).text();
     }

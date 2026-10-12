@@ -14,8 +14,9 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 /**
- * {@code table} searches: names, or summary/full details with column counts,
- * row counts and index material.
+ * {@code table} searches: names, summary details with counts and light
+ * column payloads (name/type), or full details with complete column
+ * payloads and index material.
  */
 @Singleton
 final class TableScanner implements ObjectSearcher {
@@ -56,11 +57,14 @@ final class TableScanner implements ObjectSearcher {
     private Map<String, Object> summary(String sourceId, String schema, String table) {
         Map<String, Object> details = new LinkedHashMap<>();
         try {
-            details.put("column_count", metadataService.getColumns(sourceId, schema, table).size());
+            List<ColumnInfo> columns = metadataService.getColumns(sourceId, schema, table);
+            details.put("column_count", columns.size());
             details.put("row_count", rowCount(sourceId, schema, table));
+            details.put("columns", columns.stream().map(ColumnInfo::toSummaryPayload).toList());
         } catch (RuntimeException e) {
             details.put("column_count", null);
             details.put("row_count", null);
+            details.put("columns", null);
         }
         return details;
     }

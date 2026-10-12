@@ -1,5 +1,6 @@
 package ai.jabuti.tools;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,8 @@ import jakarta.inject.Singleton;
 public class SearchObjectsHandler {
 
     private static final List<String> ROUTINES_NOTE = List.of("routines not supported over generic JDBC in MVP");
+    private static final String SCHEMALESS_SCHEMA_IGNORED_NOTE = "database has no schema concept; 'schema' parameter ignored";
+    private static final String SCHEMALESS_EMPTY_NOTE = "database has no schema concept; no schemas to list";
 
     private final DatasourceManager datasourceManager;
     private final MetadataService metadataService;
@@ -50,32 +53,66 @@ public class SearchObjectsHandler {
         SearchRequest request = SearchRequest.parse(objectType, pattern, schema, table, detailLevel, limit);
 
         datasourceManager.ensureConnected(sourceId);
-        String schemaError = schemaNotFoundError(sourceId, request);
-        if (schemaError != null) {
-            throw new ToolError(schemaError, ToolEnvelope.CODE_SCHEMA_NOT_FOUND);
+        List<String> notes = new ArrayList<>();
+        SearchRequest effective = request;
+        List<String> availableSchemas = null;
+        if (request.schema() != null) {
+            availableSchemas = metadataService.getSchemas(sourceId);
+            switch (resolveSchema(availableSchemas, request.schema())) {
+                case USE_DEFAULT_SCOPE -> {
+                    effective = new SearchRequest(request.objectType(), request.pattern(), null, request.table(),
+                            request.detailLevel(), request.limit());
+                    notes.add(SCHEMALESS_SCHEMA_IGNORED_NOTE);
+                }
+                case USE_REQUESTED -> {
+                    // The requested schema exists: keep it.
+                }
+                case SCHEMA_NOT_FOUND -> throw new ToolError(
+                        "Schema '" + request.schema() + "' does not exist. Available schemas: "
+                                + String.join(", ", availableSchemas),
+                        ToolEnvelope.CODE_SCHEMA_NOT_FOUND,
+                        "Pass one of the listed schemas, or omit 'schema' to search the default scope");
+            }
         }
 
-        ObjectSearcher searcher = searchers.get(request.objectType());
-        List<String> notes = List.of();
+        ObjectSearcher searcher = searchers.get(effective.objectType());
         List<Map<String, Object>> results;
         if (searcher == null) {
             results = List.of();
-            notes = ROUTINES_NOTE;
+            notes.addAll(ROUTINES_NOTE);
         } else {
-            results = objectSearch.search(sourceId, request, searcher);
+            results = objectSearch.search(sourceId, effective, searcher);
+            if ("schema".equals(effective.objectType())) {
+                if (availableSchemas == null) {
+                    availableSchemas = metadataService.getSchemas(sourceId);
+                }
+                if (availableSchemas.isEmpty()) {
+                    notes.add(SCHEMALESS_EMPTY_NOTE);
+                }
+            }
         }
-        return responseData(request, results, notes);
+        return responseData(effective, results, notes);
     }
 
-    private String schemaNotFoundError(String sourceId, SearchRequest request) {
-        if (request.schema() == null) {
-            return null;
+    /**
+     * Decides how a requested schema resolves against the engine's reported
+     * schemas. A pure function of its inputs so the schema-less branches stay
+     * unit-testable without a schema-less database.
+     */
+    enum SchemaResolution {
+        USE_DEFAULT_SCOPE,
+        USE_REQUESTED,
+        SCHEMA_NOT_FOUND
+    }
+
+    static SchemaResolution resolveSchema(List<String> availableSchemas, String requestedSchema) {
+        if (availableSchemas.isEmpty()) {
+            return SchemaResolution.USE_DEFAULT_SCOPE;
         }
-        List<String> schemas = metadataService.getSchemas(sourceId);
-        if (schemas.contains(request.schema())) {
-            return null;
+        if (availableSchemas.contains(requestedSchema)) {
+            return SchemaResolution.USE_REQUESTED;
         }
-        return "Schema '" + request.schema() + "' does not exist. Available schemas: " + String.join(", ", schemas);
+        return SchemaResolution.SCHEMA_NOT_FOUND;
     }
 
     private static Map<String, Object> responseData(SearchRequest request, List<Map<String, Object>> results,

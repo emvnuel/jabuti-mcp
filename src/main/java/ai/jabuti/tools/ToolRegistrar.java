@@ -93,13 +93,17 @@ public class ToolRegistrar {
         String title = readonly ? "Execute SQL (read-only)" : "Execute SQL";
         String readonlyNote = readonly ? " [READ-ONLY MODE]" : "";
         String maxRowsNote = " (limited to " + tool.maxRows() + " rows; capped results carry \"truncated\": true)";
-        String description = "Execute SQL queries on " + target(tool, singleSource) + readonlyNote + maxRowsNote;
+        String description = "Execute SQL queries on " + target(tool, singleSource) + readonlyNote + maxRowsNote
+                + ". Example argument: {\"sql\":\"SELECT * FROM my_table ORDER BY created_at DESC LIMIT 10\"}."
+                + " For latest/most-recent questions, ORDER BY a date/time column, never by ordinal"
+                + " position (ORDER BY 1) or id.";
 
         toolManager.newTool(name)
                 .setTitle(title)
                 .setDescription(description)
                 .setAnnotations(annotations(title, readonly, !readonly))
-                .addArgument("sql", "SQL to execute (multiple statements separated by ;)", true, String.class)
+                .addArgument("sql", "SQL to execute (multiple statements separated by ;),"
+                        + " passed as the {\"sql\":\"...\"} argument", true, String.class)
                 .setHandler(ta -> {
                     logFirstUse(ta.log(), tool.source());
                     return ToolCalls.response(ToolEnvelope.CODE_EXECUTION_ERROR,
@@ -114,14 +118,22 @@ public class ToolRegistrar {
         toolManager.newTool(name)
                 .setTitle(title)
                 .setDescription("Search and list database objects on " + target(tool, singleSource)
-                        + ". Start with detail_level=names and drill down with summary/full")
+                        + ". Start with detail_level=names and drill down with summary/full."
+                        + " Find tables with {\"object_type\":\"table\",\"pattern\":\"%my_table%\","
+                        + "\"detail_level\":\"summary\"} (summary returns each table's column names);"
+                        + " search columns across tables with {\"object_type\":\"column\",\"pattern\":\"%my_column%\"}."
+                        + " schema and table are optional filters; omit schema entirely on databases"
+                        + " without schemas (e.g. SQLite)")
                 .setAnnotations(annotations(title, true, false))
                 .addArgument("object_type", "Object type to search: schema|table|view|column|procedure|function|index",
                         true, String.class)
                 .addArgument("pattern", "LIKE pattern (% = any chars, _ = one char)", false, String.class)
-                .addArgument("schema", "Filter to schema", false, String.class)
-                .addArgument("table", "Filter to table (requires schema; column/index only)", false, String.class)
-                .addArgument("detail_level", "Detail: names (minimal), summary (metadata), full (all)", false, String.class)
+                .addArgument("schema", "Filter to schema (optional; ignored on databases without schemas)", false,
+                        String.class)
+                .addArgument("table", "Filter to a single table (object_type column/index only; schema not required)",
+                        false, String.class)
+                .addArgument("detail_level", "Detail: names (minimal), summary (counts and column names/types),"
+                        + " full (columns, indexes, row counts)", false, String.class)
                 .addArgument("limit", "Max results (default 100, max 1000)", false, Integer.class)
                 .setHandler(ta -> {
                     logFirstUse(ta.log(), tool.source());

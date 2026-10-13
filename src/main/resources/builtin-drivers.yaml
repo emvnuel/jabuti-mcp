@@ -7,19 +7,19 @@ drivers:
     maven: [{ groupId: com.mysql, artifactId: mysql-connector-j, version: "26.7.0" }]
   - id: mariadb-jdbc
     className: org.mariadb.jdbc.Driver
-    maven: [{ groupId: org.mariadb.jdbc, artifactId: mariadb-java-client, version: "3.5.9" }]
+    maven: [{ groupId: org.mariadb.jdbc, artifactId: mariadb-java-client, version: "3.5.10" }]
   - id: sqlite-jdbc
     className: org.sqlite.JDBC
-    maven: [{ groupId: org.xerial, artifactId: sqlite-jdbc, version: "3.47.2.0" }]
+    maven: [{ groupId: org.xerial, artifactId: sqlite-jdbc, version: "3.53.4.0" }]
   - id: mssql-jdbc
     className: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    maven: [{ groupId: com.microsoft.sqlserver, artifactId: mssql-jdbc, version: "13.2.0.jre11" }]
+    maven: [{ groupId: com.microsoft.sqlserver, artifactId: mssql-jdbc, version: "13.6.0.jre11" }]
   - id: oracle-jdbc
     className: oracle.jdbc.OracleDriver
-    maven: [{ groupId: com.oracle.database.jdbc, artifactId: ojdbc11, version: "23.7.0.25.01" }]
+    maven: [{ groupId: com.oracle.database.jdbc, artifactId: ojdbc11, version: "23.26.3.0.0" }]
   - id: db2-jdbc
     className: com.ibm.db2.jcc.DB2Driver
-    maven: [{ groupId: com.ibm.db2, artifactId: jcc, version: "12.1.5.0" }]
+    maven: [{ groupId: com.ibm.db2, artifactId: jcc, version: "12.1.5.0_special_89304" }]
   - id: hsqldb-jdbc
     className: org.hsqldb.jdbc.JDBCDriver
     maven: [{ groupId: org.hsqldb, artifactId: hsqldb, version: "2.7.4" }]

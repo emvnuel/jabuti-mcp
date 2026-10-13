@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["custom.regex", "maven"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["(^|/)builtin-drivers.yaml$"],
+      "matchStrings": [
+        "groupId:\\s*(?<depNameGroup>[^,\\s]+),\\s*artifactId:\\s*(?<depNameArtifact>[^,\\s]+),\\s*version:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "maven",
+      "depNameTemplate": "{{{depNameGroup}}}:{{{depNameArtifact}}}",
+      "versioningTemplate": "maven"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["com.microsoft.sqlserver:mssql-jdbc"],
+      "allowedVersions": "/\\.jre11$/"
+    },
+    {
+      "groupName": "built-in drivers",
+      "matchManagers": ["custom.regex"]
+    },
+    {
+      "groupName": "built-in drivers",
+      "matchManagers": ["maven"],
+      "matchPackageNames": ["org.hsqldb:hsqldb", "org.apache.derby:derby"]
+    },
+    {
+      "matchManagers": ["maven"],
+      "matchPackageNames": ["!org.hsqldb:hsqldb", "!org.apache.derby:derby"],
+      "enabled": false
+    }
+  ],
+  "minimumReleaseAge": "3 days",
+  "schedule": ["before 6am on monday"],
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps"
+}

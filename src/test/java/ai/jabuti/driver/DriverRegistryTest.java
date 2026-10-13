@@ -1,6 +1,7 @@
 package ai.jabuti.driver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +30,7 @@ class DriverRegistryTest {
 
         DriverDescriptor descriptor = registry.require("postgres-jdbc");
         assertEquals("org.postgresql.Driver", descriptor.className());
-        assertEquals("org.postgresql:postgresql:42.7.14", descriptor.coordinates());
+        assertTrue(descriptor.coordinates().startsWith("org.postgresql:postgresql:"), descriptor.coordinates());
         assertTrue(registry.knownIds().containsAll(List.of(
                 "postgres-jdbc", "mysql-jdbc", "mariadb-jdbc", "sqlite-jdbc", "mssql-jdbc", "oracle-jdbc",
                 "db2-jdbc", "hsqldb-jdbc", "derby-jdbc", "firebird-jdbc", "hana-jdbc", "informix-jdbc",
@@ -42,7 +43,7 @@ class DriverRegistryTest {
 
         DriverDescriptor descriptor = registry.require("db2-jdbc");
         assertEquals("com.ibm.db2.jcc.DB2Driver", descriptor.className());
-        assertEquals("com.ibm.db2:jcc:12.1.5.0", descriptor.coordinates());
+        assertTrue(descriptor.coordinates().startsWith("com.ibm.db2:jcc:"), descriptor.coordinates());
     }
 
     @Test
@@ -51,7 +52,8 @@ class DriverRegistryTest {
 
         DriverDescriptor descriptor = registry.require("derby-jdbc");
         assertEquals("org.apache.derby.iapi.jdbc.AutoloadedDriver", descriptor.className());
-        assertEquals("org.apache.derby:derby:10.17.1.0", descriptor.coordinates());
+        assertTrue(descriptor.coordinates().startsWith("org.apache.derby:derby:"), descriptor.coordinates());
+        assertFalse(descriptor.coordinates().contains(","), descriptor.coordinates());
     }
 
     @Test

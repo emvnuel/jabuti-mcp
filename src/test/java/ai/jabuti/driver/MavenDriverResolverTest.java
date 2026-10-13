@@ -23,6 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import ai.jabuti.config.JdbcMcpConfig;
 import ai.jabuti.config.MavenCoord;
 import ai.jabuti.config.RepositoryEntry;
 import com.sun.net.httpserver.HttpExchange;
@@ -51,9 +52,24 @@ class MavenDriverResolverTest {
         System.clearProperty(MavenDriverResolver.OFFLINE_PROPERTY);
     }
 
+    /**
+     * The built-in catalog entry, so the resolver test always exercises the
+     * pinned coordinate and a version bump (e.g. a Renovate PR) never requires
+     * editing this test.
+     */
     private static DriverDescriptor postgres() {
-        return new DriverDescriptor("postgres-jdbc", "org.postgresql.Driver",
-                List.of(new MavenCoord("org.postgresql", "postgresql", "42.7.14")), null);
+        return new DriverRegistry(new JdbcMcpConfig(List.of(), List.of(), List.of(), List.of()))
+                .require("postgres-jdbc");
+    }
+
+    /**
+     * Maven layout of a pinned jar:
+     * {@code <group path>/<artifact>/<version>/<artifact>-<version>.jar}.
+     */
+    private static String pinnedJarPath(MavenCoord coordinate) {
+        return "%s/%s/%s/%s-%s.jar".formatted(
+                coordinate.groupId().replace('.', '/'), coordinate.artifactId(), coordinate.version(),
+                coordinate.artifactId(), coordinate.version());
     }
 
     private static DriverDescriptor fixtureDriver(String repository) {
@@ -74,17 +90,18 @@ class MavenDriverResolverTest {
     @Test
     void downloadsAndLoadsDriverInIsolatedClassLoader() throws Exception {
         MavenDriverResolver resolver = new MavenDriverResolver();
+        DriverDescriptor descriptor = postgres();
 
-        List<Path> jars = resolver.resolveJars(postgres());
+        List<Path> jars = resolver.resolveJars(descriptor);
 
         assertFalse(jars.isEmpty());
         assertTrue(jars.stream().allMatch(Files::exists));
         assertTrue(jars.stream().anyMatch(
                 path -> path.toString().replace('\\', '/')
-                        .endsWith("org/postgresql/postgresql/42.7.14/postgresql-42.7.14.jar")),
+                        .endsWith(pinnedJarPath(descriptor.maven().get(0)))),
                 "expected the pinned jar in <group>/<artifact>/<version>/, got: " + jars);
 
-        Driver driver = resolver.loadDriver(postgres());
+        Driver driver = resolver.loadDriver(descriptor);
         assertEquals("org.postgresql.Driver", driver.getClass().getName());
         assertNotSame(MavenDriverResolver.class.getClassLoader(), driver.getClass().getClassLoader(),
                 "driver must come from its own URLClassLoader, not the application classpath");

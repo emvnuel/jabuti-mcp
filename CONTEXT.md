@@ -13,7 +13,8 @@ _Avoid_: datasource, database (when the configured entry is meant)
 
 **Driver catalog**:
 The built-in driver ids merged with the YAML `drivers:` entries; an id
-resolves to Maven coordinates, a downloaded jar and a loaded class.
+resolves to Maven coordinates, a downloaded jar and a loaded class. Built-in
+versions are pins, bumped only via a reviewed Renovate PR.
 _Avoid_: driver registry, driver list
 
 **Object type**:

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -324,11 +325,28 @@ class ServerIT {
 
     @Test
     @Order(Integer.MAX_VALUE)
-    void downloadedDriversIntoConfiguredDirectory() {
-        assertTrue(Files.exists(driversDir.resolve("org/postgresql/postgresql/42.7.14/postgresql-42.7.14.jar")),
+    void downloadedDriversIntoConfiguredDirectory() throws Exception {
+        assertTrue(containsJar(driversDir.resolve("org/postgresql/postgresql"), "postgresql-"),
                 "postgres driver jar not found under " + driversDir);
-        assertTrue(Files.exists(driversDir.resolve("com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar")),
+        assertTrue(containsJar(driversDir.resolve("com/mysql/mysql-connector-j"), "mysql-connector-j-"),
                 "mysql driver jar not found under " + driversDir);
+    }
+
+    /**
+     * Whether any downloaded version under {@code artifactDir} holds a jar
+     * named {@code <jarPrefix><version>.jar}. The catalog pins the versions;
+     * this test only checks that the drivers arrived.
+     */
+    private static boolean containsJar(Path artifactDir, String jarPrefix) throws Exception {
+        if (!Files.isDirectory(artifactDir)) {
+            return false;
+        }
+        try (Stream<Path> paths = Files.walk(artifactDir)) {
+            return paths.anyMatch(path -> {
+                String name = path.getFileName().toString();
+                return name.startsWith(jarPrefix) && name.endsWith(".jar");
+            });
+        }
     }
 
     private static JsonNode callTool(String name, Map<String, Object> arguments) throws Exception {

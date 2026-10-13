@@ -25,7 +25,7 @@ public final class H2Sources {
      * A manager whose single source uses {@code url} but still loads the H2
      * driver. Nothing connects until a test asks for a connection, so
      * dialect-sensitive logic (statement splitting, EXPLAIN support) can be
-     * exercised for another database family without that database.
+     * exercised for another dialect without that database.
      */
     public static DatasourceManager manager(String url) {
         JdbcMcpConfig config = new JdbcMcpConfig(

@@ -10,11 +10,17 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 /**
- * The opt-in {@code health_check} tool: pool state, a {@code SELECT 1} probe
- * and the database product/version. Generic MVP — engine-specific metrics
- * degrade to {@code notes} instead of failing (mirrors dbhub's {@code notes}
- * pattern). All JDBC reads are owned by {@link DatasourceManager}. Returns
- * envelope data or throws {@link ToolError}.
+ * The opt-in {@code health_check} tool: pool state, the dialect's
+ * connection-liveness probe (e.g. {@code SELECT 1 FROM SYSIBM.SYSDUMMY1} on
+ * DB2) and the database product/version. Generic MVP — engine-specific
+ * metrics degrade to {@code notes} instead of failing (mirrors dbhub's
+ * {@code notes} pattern). All JDBC reads are owned by
+ * {@link DatasourceManager}. Returns envelope data or throws
+ * {@link ToolError}.
+ *
+ * <p>The wire key {@code probe.select1_ok} keeps its historic name: it
+ * reports the dialect probe, which is a literal {@code SELECT 1} only where
+ * the engine's grammar allows one.
  */
 @Singleton
 public class HealthCheckHandler {

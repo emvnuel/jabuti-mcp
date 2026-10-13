@@ -32,7 +32,26 @@ class DriverRegistryTest {
         assertEquals("org.postgresql:postgresql:42.7.14", descriptor.coordinates());
         assertTrue(registry.knownIds().containsAll(List.of(
                 "postgres-jdbc", "mysql-jdbc", "mariadb-jdbc", "sqlite-jdbc", "mssql-jdbc", "oracle-jdbc",
-                "hsqldb-jdbc", "derby-jdbc", "firebird-jdbc", "hana-jdbc", "informix-jdbc", "duckdb-jdbc")));
+                "db2-jdbc", "hsqldb-jdbc", "derby-jdbc", "firebird-jdbc", "hana-jdbc", "informix-jdbc",
+                "duckdb-jdbc")));
+    }
+
+    @Test
+    void resolvesBuiltinDb2Driver() {
+        DriverRegistry registry = new DriverRegistry(config(source("db2-jdbc")));
+
+        DriverDescriptor descriptor = registry.require("db2-jdbc");
+        assertEquals("com.ibm.db2.jcc.DB2Driver", descriptor.className());
+        assertEquals("com.ibm.db2:jcc:12.1.5.0", descriptor.coordinates());
+    }
+
+    @Test
+    void resolvesBuiltinDerbyDriverFromTheSingleEngineJar() {
+        DriverRegistry registry = new DriverRegistry(config(source("derby-jdbc")));
+
+        DriverDescriptor descriptor = registry.require("derby-jdbc");
+        assertEquals("org.apache.derby.iapi.jdbc.AutoloadedDriver", descriptor.className());
+        assertEquals("org.apache.derby:derby:10.17.1.0", descriptor.coordinates());
     }
 
     @Test

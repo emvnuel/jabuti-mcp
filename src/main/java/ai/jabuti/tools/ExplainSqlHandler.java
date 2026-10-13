@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import ai.jabuti.datasource.DatasourceManager;
-import ai.jabuti.dialect.DbFamily;
+import ai.jabuti.dialect.Dialect;
 import ai.jabuti.dialect.ExplainBuilder;
 import ai.jabuti.jdbc.QueryExecutor;
 import ai.jabuti.jdbc.ResultSetPayload;
@@ -39,8 +39,8 @@ public class ExplainSqlHandler {
     }
 
     public Map<String, Object> explain(String sourceId, String sql) {
-        DbFamily family = datasourceManager.family(sourceId);
-        if (!family.supportsExplain()) {
+        Dialect dialect = datasourceManager.dialect(sourceId);
+        if (!dialect.supportsExplain()) {
             throw new ToolError("explain_sql is not supported for source '" + sourceId + "' yet",
                     ToolEnvelope.CODE_UNSUPPORTED);
         }
@@ -51,7 +51,7 @@ public class ExplainSqlHandler {
             throw new ToolError(validationError, ToolEnvelope.CODE_INVALID_INPUT);
         }
 
-        String statement = family.explain(batch.statements().get(0).text());
+        String statement = dialect.explain(batch.statements().get(0).text());
         ResultSetPayload payload = firstPayload(
                 queryExecutor.execute(StatementBatch.trusted(sourceId, statement), EXPLAIN_MAX_ROWS), statement);
 

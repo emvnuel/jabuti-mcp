@@ -66,10 +66,16 @@ tools:                           # omit entirely to default to execute_sql + sea
 ```
 
 - Built-in drivers: `postgres-jdbc`, `mysql-jdbc`, `mariadb-jdbc`,
-  `sqlite-jdbc`, `mssql-jdbc`, `oracle-jdbc`, `hsqldb-jdbc`, `derby-jdbc`,
-  `firebird-jdbc`, `hana-jdbc`, `informix-jdbc`, `duckdb-jdbc` (pinned
-  versions in `src/main/resources/builtin-drivers.yaml`). A `drivers:` entry
-  with the same id overrides the version; omit `className` to inherit it.
+  `sqlite-jdbc`, `mssql-jdbc`, `oracle-jdbc`, `db2-jdbc`, `hsqldb-jdbc`,
+  `derby-jdbc`, `firebird-jdbc`, `hana-jdbc`, `informix-jdbc`, `duckdb-jdbc`
+  (pinned versions in `src/main/resources/builtin-drivers.yaml`). A `drivers:`
+  entry with the same id overrides the version; omit `className` to inherit
+  it.
+- Liveness probes (run on every use of a source's pool, not only when it is
+  created, and by `health_check`) are engine-aware: a FROM-less `SELECT 1`
+  where the grammar allows it, otherwise a constant from the engine's dummy
+  table — `SELECT 1 FROM DUAL` on Oracle, `SELECT 1 FROM SYSIBM.SYSDUMMY1` on
+  DB2 and Derby, and the equivalents on Firebird, HANA, HSQLDB and Informix.
 - `repositories:` is optional; when present drivers come only from the
   declared repositories (see [Private Maven repositories](#private-maven-repositories)).
   A `drivers:` entry may pin one with `repository: <id>`.
@@ -286,8 +292,8 @@ keeps its cache.
 | --- | --- | --- |
 | `execute_sql` | `sql` | Multiple statements separated by `;`; one payload per statement; capped results carry `"truncated": true` |
 | `search_objects` | `object_type` (schema/table/view/column/procedure/function/index), `pattern`, `schema`, `table`, `detail_level` (names/summary/full), `limit` | Always read-only; progressive disclosure |
-| `explain_sql` (opt-in) | `sql` | Never executes the target statement; `EXPLAIN QUERY PLAN` on SQLite; unsupported families return `UNSUPPORTED` |
-| `health_check` (opt-in) | — | Pool state + `SELECT 1` probe + database version; engine-specific metrics degrade to `notes` |
+| `explain_sql` (opt-in) | `sql` | Never executes the target statement; `EXPLAIN QUERY PLAN` on SQLite; engines without a supported EXPLAIN form return `UNSUPPORTED` |
+| `health_check` (opt-in) | — | Pool state + engine-aware liveness probe (reported as `probe.select1_ok`) + database version; engine-specific metrics degrade to `notes` |
 | `database_info` (opt-in) | — | Product/version, driver, redacted URL, identifier quoting, catalog/schema terms, transaction support, SQL keywords; each unavailable value degrades to `notes` |
 
 Errors are always returned as tool output:

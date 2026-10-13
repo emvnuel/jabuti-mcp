@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The failure paths of {@code explain_sql} that do not need a database:
- * unsupported families and validation rejections that happen before any
+ * unsupported dialects and validation rejections that happen before any
  * connection is opened.
  */
 class ExplainSqlHandlerTest {

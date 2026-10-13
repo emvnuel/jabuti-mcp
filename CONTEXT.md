@@ -69,5 +69,20 @@ _Avoid_: template, workflow
 **Database info**:
 The opt-in `database_info` tool: engine dialect hints (product/version,
 identifier quoting, catalog/schema terms, transaction support, SQL keywords)
-read from `DatabaseMetaData`; unavailable values degrade to `notes`.
+read from `DatabaseMetaData`; unavailable values degrade to `notes`. Its
+`family` field carries the dialect id.
 _Avoid_: dialect report, metadata dump
+
+**Connection probe**:
+The dialect's liveness statement run on every use of a source's pool, not
+only when it is created, and reported by `health_check`; dialects whose
+grammar rejects a FROM-less `SELECT 1` use their dummy table
+(`SYSIBM.SYSDUMMY1`, `DUAL`, `RDB$DATABASE`, ...).
+_Avoid_: ping, validation query
+
+**Dialect**:
+One engine's JDBC behavior — connection probe, EXPLAIN form, identifier
+quoting, string escaping, default schema scope and pool sizing — selected
+from the source's JDBC URL alone. Adding an engine means one new dialect
+class plus one registry entry; no existing dialect changes.
+_Avoid_: family, engine adapter

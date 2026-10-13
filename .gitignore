@@ -2,6 +2,9 @@
 datasources.yaml
 datasources.docker.yaml
 
+# Embedded Derby writes its log to the working directory by default.
+derby.log
+
 target/
 .idea/
 *.iml

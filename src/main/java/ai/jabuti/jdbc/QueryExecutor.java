@@ -55,7 +55,7 @@ public class QueryExecutor {
      * the count came back without a usable value.
      */
     public OptionalInt countRows(String sourceId, String schema, String table) {
-        String qualified = datasourceManager.family(sourceId).qualify(schema, table);
+        String qualified = datasourceManager.dialect(sourceId).qualify(schema, table);
         List<ResultSetPayload> payloads = execute(
                 StatementBatch.trusted(sourceId, "SELECT COUNT(*) AS count FROM " + qualified), 1);
         if (payloads.isEmpty() || payloads.get(0).rows().isEmpty()) {

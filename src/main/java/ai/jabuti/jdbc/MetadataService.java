@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import ai.jabuti.datasource.DatasourceManager;
-import ai.jabuti.dialect.DbFamily;
+import ai.jabuti.dialect.Dialect;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -48,11 +48,11 @@ public class MetadataService {
     /**
      * Scopes searches to the connected database when the caller passes no
      * explicit schema. The scope rule lives on the dialect (see
-     * {@link DbFamily#defaultSchemaScope}); the current catalog is only read
+     * {@link Dialect#defaultSchemaScope}); the current catalog is only read
      * for catalog-based engines.
      */
     public List<String> defaultSchemas(String sourceId) {
-        return datasourceManager.family(sourceId).defaultSchemaScope(getSchemas(sourceId), () -> getCatalog(sourceId));
+        return datasourceManager.dialect(sourceId).defaultSchemaScope(getSchemas(sourceId), () -> getCatalog(sourceId));
     }
 
     public List<String> getTables(String sourceId, String schema) {

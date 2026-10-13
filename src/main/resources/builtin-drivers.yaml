@@ -17,11 +17,16 @@ drivers:
   - id: oracle-jdbc
     className: oracle.jdbc.OracleDriver
     maven: [{ groupId: com.oracle.database.jdbc, artifactId: ojdbc11, version: "23.7.0.25.01" }]
+  - id: db2-jdbc
+    className: com.ibm.db2.jcc.DB2Driver
+    maven: [{ groupId: com.ibm.db2, artifactId: jcc, version: "12.1.5.0" }]
   - id: hsqldb-jdbc
     className: org.hsqldb.jdbc.JDBCDriver
     maven: [{ groupId: org.hsqldb, artifactId: hsqldb, version: "2.7.4" }]
+  # derby.jar's own auto-registered driver (10.15+): one coordinate, so a
+  # version override cannot drop derbytools, where EmbeddedDriver now lives.
   - id: derby-jdbc
-    className: org.apache.derby.jdbc.EmbeddedDriver
+    className: org.apache.derby.iapi.jdbc.AutoloadedDriver
     maven: [{ groupId: org.apache.derby, artifactId: derby, version: "10.17.1.0" }]
   - id: firebird-jdbc
     className: org.firebirdsql.jdbc.FBDriver

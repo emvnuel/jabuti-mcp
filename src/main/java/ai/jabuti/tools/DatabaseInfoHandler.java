@@ -30,7 +30,7 @@ public class DatabaseInfoHandler {
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("source_id", sourceId);
-        data.put("family", datasourceManager.family(sourceId).name());
+        data.put("family", datasourceManager.dialect(sourceId).id());
         data.put("product", info.product());
         data.put("version", info.version());
         data.put("driver_name", info.driverName());

@@ -17,7 +17,8 @@ import java.util.function.Function;
 import ai.jabuti.config.JdbcMcpConfig;
 import ai.jabuti.config.JdbcMcpConfigProvider;
 import ai.jabuti.config.SourceEntry;
-import ai.jabuti.dialect.DbFamily;
+import ai.jabuti.dialect.Dialect;
+import ai.jabuti.dialect.Dialects;
 import ai.jabuti.driver.DriverRegistry;
 import ai.jabuti.driver.MavenDriverResolver;
 import ai.jabuti.safety.DsnRedactor;
@@ -56,9 +57,9 @@ public class DatasourceManager {
     }
 
     /**
-     * Creates the pool for the source if needed and probes it with
-     * {@code SELECT 1}. A failed probe drops the pool so a later retry can
-     * rebuild it.
+     * Creates the pool for the source if needed and probes it with the
+     * dialect's liveness statement ({@link Dialect#probeSql()}). A failed
+     * probe drops the pool so a later retry can rebuild it.
      */
     public void ensureConnected(String sourceId) {
         connect(config.requireSource(sourceId));
@@ -80,17 +81,17 @@ public class DatasourceManager {
     }
 
     /**
-     * The database family inferred from the source's JDBC URL.
+     * The dialect inferred from the source's JDBC URL.
      */
-    public DbFamily family(String sourceId) {
-        return DbFamily.fromJdbcUrl(config.requireSource(sourceId).url());
+    public Dialect dialect(String sourceId) {
+        return Dialects.fromJdbcUrl(config.requireSource(sourceId).url());
     }
 
     /**
      * Whether the source's engine treats backslash as a string escape.
      */
     public boolean backslashEscapedStrings(String sourceId) {
-        return family(sourceId).backslashEscapedStrings();
+        return dialect(sourceId).backslashEscapedStrings();
     }
 
     /**
@@ -107,12 +108,13 @@ public class DatasourceManager {
     }
 
     /**
-     * Borrows a connection and reads the database product/version plus a
-     * {@code SELECT 1} probe; each failed read degrades to a note instead of
-     * failing the check.
+     * Borrows a connection and reads the database product/version plus the
+     * dialect's liveness probe ({@link Dialect#probeSql()}); each failed read
+     * degrades to a note instead of failing the check.
      */
     public DatabaseInfo databaseInfo(String sourceId) {
         SourceEntry source = config.requireSource(sourceId);
+        Dialect dialect = Dialects.fromJdbcUrl(source.url());
         List<String> notes = new ArrayList<>();
         String product = null;
         String version = null;
@@ -123,13 +125,15 @@ public class DatasourceManager {
                 product = metaData.getDatabaseProductName();
                 version = metaData.getDatabaseProductVersion();
             } catch (Exception e) {
-                notes.add("database product/version unavailable: " + e.getMessage());
+                notes.add("database product/version unavailable: "
+                        + DsnRedactor.redact(e.getMessage(), source.password()));
             }
-            try (Statement statement = connection.createStatement();
-                    ResultSet resultSet = statement.executeQuery("SELECT 1")) {
-                selectOneOk = resultSet.next();
+            try {
+                probe(connection, dialect);
+                selectOneOk = true;
             } catch (Exception e) {
-                notes.add("SELECT 1 probe failed: " + e.getMessage());
+                notes.add("connection probe failed (" + dialect.probeSql() + "): "
+                        + DsnRedactor.redact(e.getMessage(), source.password()));
             }
         } catch (SQLException e) {
             throw new IllegalStateException(DsnRedactor.redact(e.getMessage(), source.password()), e);
@@ -194,10 +198,24 @@ public class DatasourceManager {
         }
     }
 
+    /**
+     * Runs the dialect's liveness probe and fails when it returns no row.
+     * Every probe is a constant read, so no transaction or committed state is
+     * touched.
+     */
+    private static void probe(Connection connection, Dialect dialect) throws SQLException {
+        try (Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(dialect.probeSql())) {
+            if (!resultSet.next()) {
+                throw new SQLException("probe returned no rows");
+            }
+        }
+    }
+
     private HikariDataSource connect(SourceEntry source) {
         HikariDataSource pool = pool(source);
-        try (Connection connection = pool.getConnection(); Statement statement = connection.createStatement()) {
-            statement.execute("SELECT 1");
+        try (Connection connection = pool.getConnection()) {
+            probe(connection, Dialects.fromJdbcUrl(source.url()));
         } catch (SQLException e) {
             HikariDataSource broken = pools.remove(source.id());
             if (broken != null) {
@@ -224,7 +242,8 @@ public class DatasourceManager {
         HikariConfig hikari = new HikariConfig();
         hikari.setPoolName("jabuti-mcp-" + source.id());
         hikari.setDataSource(new DriverDataSource(driverLoader.apply(source.driver()), source.url(), credentials(source)));
-        hikari.setMaximumPoolSize(effectiveMaxPoolSize(source.url(), source.poolMaxConnections()));
+        hikari.setMaximumPoolSize(
+                Dialects.fromJdbcUrl(source.url()).effectiveMaxPoolSize(source.poolMaxConnections()));
         hikari.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
         // Failures surface through ensureConnected's probe with a redacted,
         // source-scoped message instead of a PoolInitializationException.
@@ -241,15 +260,6 @@ public class DatasourceManager {
             props.setProperty("password", source.password());
         }
         return props;
-    }
-
-    /**
-     * SQLite is locked to a single connection: a bigger pool breaks
-     * {@code :memory:} databases (each connection gets its own database) and
-     * serializes file access anyway.
-     */
-    static int effectiveMaxPoolSize(String url, int configured) {
-        return DbFamily.fromJdbcUrl(url) == DbFamily.SQLITE ? 1 : configured;
     }
 
     /**

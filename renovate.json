@@ -5,7 +5,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(^|/)builtin-drivers.yaml$"],
+      "managerFilePatterns": [
+        "/(^|/)builtin-drivers.yaml$/"
+      ],
       "matchStrings": [
         "groupId:\\s*(?<depNameGroup>[^,\\s]+),\\s*artifactId:\\s*(?<depNameArtifact>[^,\\s]+),\\s*version:\\s*\"(?<currentValue>[^\"]+)\""
       ],

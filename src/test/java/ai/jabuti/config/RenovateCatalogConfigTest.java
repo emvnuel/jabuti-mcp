@@ -37,7 +37,7 @@ class RenovateCatalogConfigTest {
 
         Set<String> captured = new LinkedHashSet<>();
         for (JsonNode manager : config.path("customManagers")) {
-            if (!matchesFile(manager.path("fileMatch"), catalogPath)) {
+            if (!matchesFile(manager, catalogPath)) {
                 continue;
             }
             String depNameTemplate = manager.path("depNameTemplate").asText();
@@ -64,9 +64,20 @@ class RenovateCatalogConfigTest {
                         + " stops bumping the missed drivers");
     }
 
-    private static boolean matchesFile(JsonNode fileMatch, String path) {
-        for (JsonNode pattern : fileMatch) {
-            if (Pattern.compile(pattern.asText()).matcher(path).find()) {
+    /**
+     * Whether the custom manager applies to {@code path}, accepting both the
+     * current {@code managerFilePatterns} key and the legacy {@code fileMatch}
+     * one (Renovate migrates between them), as plain regex or {@code /regex/}.
+     */
+    private static boolean matchesFile(JsonNode manager, String path) {
+        JsonNode patterns = manager.path("managerFilePatterns").isMissingNode()
+                ? manager.path("fileMatch") : manager.path("managerFilePatterns");
+        for (JsonNode pattern : patterns) {
+            String expression = pattern.asText();
+            if (expression.startsWith("/") && expression.endsWith("/")) {
+                expression = expression.substring(1, expression.length() - 1);
+            }
+            if (Pattern.compile(expression).matcher(path).find()) {
                 return true;
             }
         }

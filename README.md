@@ -29,6 +29,20 @@ jbang downloads the single-file jar from the latest GitHub release and, if
 needed, a matching JDK. The Claude Desktop config below works the same way with
 `"command": "jbang"` and `"args": ["jabuti@emvnuel/jabuti-mcp", "--config=/absolute/path/to/datasources.yaml"]`.
 
+### Use from AI agents (Agent Skill)
+
+The repo ships an [Agent Skill](https://agentskills.io) that tells your agent
+when and how to use this server — install it straight into Claude Code,
+Cursor, Copilot and 20+ other agents:
+
+```bash
+npx skills add emvnuel/jabuti-mcp
+```
+
+The skill (`.agents/skills/jabuti-mcp/SKILL.md`) covers launching the server,
+writing `datasources.yaml`, per-client setup (Claude Code, Cursor,
+Copilot/VS Code, Claude Desktop, Inspector) and the tool/prompt catalog.
+
 ## Configuration
 
 Copy `datasources.yaml.example` to `datasources.yaml` and adjust it. The path is

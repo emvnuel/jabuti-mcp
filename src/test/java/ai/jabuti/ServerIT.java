@@ -145,9 +145,31 @@ class ServerIT {
         assertTrue(names.containsAll(List.of("explore_database", "er_diagram")), names.toString());
 
         JsonNode get = rpc("prompts/get", Map.of("name", "explore_database", "arguments", Map.of("source", "pg")));
-        String text = get.path("result").path("messages").get(0).path("content").path("text").asText();
+        String text = promptText(get);
         assertTrue(text.contains("source 'pg'"), get.toString());
         assertTrue(text.contains("search_objects"), get.toString());
+    }
+
+    @Test
+    void rendersPromptsForMissingAndNullSourceArguments() throws Exception {
+        // The shapes clients send when the optional argument is left unset:
+        // no "arguments" key at all, or an explicit JSON null.
+        Map<String, Object> nullSource = new LinkedHashMap<>();
+        nullSource.put("source", null);
+
+        for (String prompt : List.of("explore_database", "er_diagram")) {
+            JsonNode noArguments = rpc("prompts/get", Map.of("name", prompt));
+            assertFalse(noArguments.has("error"), prompt + " without arguments failed: " + noArguments);
+            assertTrue(promptText(noArguments).contains("Available sources: pg, pgw, my"), noArguments.toString());
+
+            JsonNode explicitNull = rpc("prompts/get", Map.of("name", prompt, "arguments", nullSource));
+            assertFalse(explicitNull.has("error"), prompt + " with a null source failed: " + explicitNull);
+            assertTrue(promptText(explicitNull).contains("Available sources: pg, pgw, my"), explicitNull.toString());
+        }
+    }
+
+    private static String promptText(JsonNode response) {
+        return response.path("result").path("messages").get(0).path("content").path("text").asText();
     }
 
     @Test

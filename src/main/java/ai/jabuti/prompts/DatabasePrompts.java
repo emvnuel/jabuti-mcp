@@ -24,8 +24,9 @@ import jakarta.inject.Singleton;
  * {@code toString()} before the handler runs, so a {@code prompts/get} whose
  * optional argument arrives as an explicit JSON null — the shape clients send
  * for an unset optional argument — fails with a JSON-RPC internal error
- * (quarkus-mcp-server 2.0.0, unfixed upstream). Annotated optional arguments
- * reach the method as a plain {@code null} instead.
+ * (quarkus-mcp-server 2.0.0; tracked upstream at
+ * quarkiverse/quarkus-mcp-server#1093). Annotated optional arguments reach
+ * the method as a plain {@code null} instead.
  *
  * <p>An optional {@code source} argument disambiguates when several sources
  * are configured.

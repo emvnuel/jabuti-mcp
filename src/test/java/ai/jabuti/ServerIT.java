@@ -4,11 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -44,14 +39,9 @@ class ServerIT {
 
     private static PostgreSQLContainer<?> postgres;
     private static LogWaitedMysqlContainer mysql;
-    private static Process server;
-    private static BufferedWriter serverIn;
-    private static BufferedReader serverOut;
-    private static Path tempDir;
+    private static StdioServerHarness client;
     private static Path driversDir;
-    private static Path stderrFile;
     private static JsonNode toolsList;
-    private static int requestId;
 
     @BeforeAll
     static void startServer() throws Exception {
@@ -65,45 +55,19 @@ class ServerIT {
         seedPostgres();
         seedMysql();
 
-        tempDir = Files.createTempDirectory("jabuti-mcp-it");
+        Path tempDir = Files.createTempDirectory("jabuti-mcp-it");
         driversDir = tempDir.resolve("drivers");
         Path configFile = tempDir.resolve("datasources.yaml");
         Files.writeString(configFile, yamlConfig());
-        stderrFile = tempDir.resolve("server-stderr.log");
 
-        Path runner = Path.of("target/quarkus-app/quarkus-run.jar").toAbsolutePath();
-        assertTrue(Files.exists(runner),
-                "packaged runner not found at " + runner + " (mvn verify packages before running ITs)");
-
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "java",
-                "-Djabuti.config=" + configFile,
-                "-Djabuti.drivers-dir=" + driversDir,
-                "-jar", runner.toString());
-        processBuilder.redirectError(stderrFile.toFile());
-        server = processBuilder.start();
-        serverIn = new BufferedWriter(new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8));
-        serverOut = new BufferedReader(new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
-
-        JsonNode init = rpc("initialize", Map.of(
-                "protocolVersion", "2025-06-18",
-                "capabilities", Map.of(),
-                "clientInfo", Map.of("name", "server-it", "version", "1.0")));
-        assertEquals("2025-06-18", init.path("result").path("protocolVersion").asText(),
-                "initialize failed: " + init);
-        notify("notifications/initialized", Map.of());
-        toolsList = rpc("tools/list", Map.of()).path("result").path("tools");
+        client = StdioServerHarness.start(configFile, driversDir, "server-it");
+        toolsList = client.rpc("tools/list", Map.of()).path("result").path("tools");
     }
 
     @AfterAll
     static void stopServer() throws Exception {
-        if (serverIn != null) {
-            serverIn.close();
-        }
-        if (server != null) {
-            if (!server.waitFor(30, java.util.concurrent.TimeUnit.SECONDS)) {
-                server.destroyForcibly();
-            }
+        if (client != null) {
+            client.close();
         }
         if (mysql != null) {
             mysql.stop();
@@ -139,12 +103,13 @@ class ServerIT {
 
     @Test
     void listsAndRendersPrompts() throws Exception {
-        JsonNode prompts = rpc("prompts/list", Map.of()).path("result").path("prompts");
+        JsonNode prompts = client.rpc("prompts/list", Map.of()).path("result").path("prompts");
         List<String> names = new ArrayList<>();
         prompts.forEach(prompt -> names.add(prompt.get("name").asText()));
         assertTrue(names.containsAll(List.of("explore_database", "er_diagram")), names.toString());
 
-        JsonNode get = rpc("prompts/get", Map.of("name", "explore_database", "arguments", Map.of("source", "pg")));
+        JsonNode get = client.rpc("prompts/get",
+                Map.of("name", "explore_database", "arguments", Map.of("source", "pg")));
         String text = promptText(get);
         assertTrue(text.contains("source 'pg'"), get.toString());
         assertTrue(text.contains("search_objects"), get.toString());
@@ -158,11 +123,11 @@ class ServerIT {
         nullSource.put("source", null);
 
         for (String prompt : List.of("explore_database", "er_diagram")) {
-            JsonNode noArguments = rpc("prompts/get", Map.of("name", prompt));
+            JsonNode noArguments = client.rpc("prompts/get", Map.of("name", prompt));
             assertFalse(noArguments.has("error"), prompt + " without arguments failed: " + noArguments);
             assertTrue(promptText(noArguments).contains("Available sources: pg, pgw, my"), noArguments.toString());
 
-            JsonNode explicitNull = rpc("prompts/get", Map.of("name", prompt, "arguments", nullSource));
+            JsonNode explicitNull = client.rpc("prompts/get", Map.of("name", prompt, "arguments", nullSource));
             assertFalse(explicitNull.has("error"), prompt + " with a null source failed: " + explicitNull);
             assertTrue(promptText(explicitNull).contains("Available sources: pg, pgw, my"), explicitNull.toString());
         }
@@ -372,7 +337,7 @@ class ServerIT {
     }
 
     private static JsonNode callTool(String name, Map<String, Object> arguments) throws Exception {
-        JsonNode response = rpc("tools/call", Map.of("name", name, "arguments", arguments));
+        JsonNode response = client.rpc("tools/call", Map.of("name", name, "arguments", arguments));
         assertFalse(response.has("error"), "tools/call failed: " + response);
         JsonNode result = response.path("result");
         String text = result.path("content").get(0).path("text").asText();
@@ -389,40 +354,6 @@ class ServerIT {
             }
         }
         throw new IllegalStateException("tool not found in tools/list: " + name);
-    }
-
-    private static JsonNode rpc(String method, Object params) throws Exception {
-        int id = ++requestId;
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("jsonrpc", "2.0");
-        message.put("id", id);
-        message.put("method", method);
-        message.put("params", params);
-        serverIn.write(MAPPER.writeValueAsString(message));
-        serverIn.newLine();
-        serverIn.flush();
-
-        while (true) {
-            String line = serverOut.readLine();
-            if (line == null) {
-                throw new IllegalStateException("server exited before responding to " + method
-                        + "; stderr:\n" + Files.readString(stderrFile));
-            }
-            JsonNode node = MAPPER.readTree(line);
-            if (node.has("id") && node.get("id").asInt() == id) {
-                return node;
-            }
-        }
-    }
-
-    private static void notify(String method, Object params) throws Exception {
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("jsonrpc", "2.0");
-        message.put("method", method);
-        message.put("params", params);
-        serverIn.write(MAPPER.writeValueAsString(message));
-        serverIn.newLine();
-        serverIn.flush();
     }
 
     private static String yamlConfig() {

@@ -3,7 +3,6 @@ package ai.jabuti;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-import ai.jabuti.prompts.PromptRegistrar;
 import ai.jabuti.tools.ToolRegistrar;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler;
 import io.quarkus.runtime.Startup;
@@ -13,9 +12,12 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 /**
- * Boots the MCP server in a deterministic order: tools and prompts are
- * registered first, and only then the stdio transport starts reading
- * {@code System.in}.
+ * Boots the MCP server in a deterministic order: tools are registered first,
+ * and only then the stdio transport starts reading {@code System.in}. The
+ * prompts need no registration here: they are annotated (see
+ * {@link ai.jabuti.prompts.DatabasePrompts}), so the extension knows them from
+ * build-time metadata as soon as its beans are created — before this observer
+ * runs.
  *
  * <p>With the extension's automatic initialization ({@code
  * quarkus.mcp.server.stdio.initialization-enabled=true}) the transport starts
@@ -31,16 +33,14 @@ public class McpBootstrapper {
     private static final Logger LOG = Logger.getLogger(McpBootstrapper.class);
 
     private final ToolRegistrar toolRegistrar;
-    private final PromptRegistrar promptRegistrar;
     private final StdioMcpMessageHandler stdioHandler;
     private final boolean stdioEnabled;
 
     @Inject
-    public McpBootstrapper(ToolRegistrar toolRegistrar, PromptRegistrar promptRegistrar,
+    public McpBootstrapper(ToolRegistrar toolRegistrar,
             StdioMcpMessageHandler stdioHandler,
             @ConfigProperty(name = "quarkus.mcp.server.stdio.enabled", defaultValue = "true") boolean stdioEnabled) {
         this.toolRegistrar = toolRegistrar;
-        this.promptRegistrar = promptRegistrar;
         this.stdioHandler = stdioHandler;
         this.stdioEnabled = stdioEnabled;
     }
@@ -48,7 +48,6 @@ public class McpBootstrapper {
     @Startup
     void boot() {
         toolRegistrar.registerAll();
-        promptRegistrar.registerAll();
         if (!stdioEnabled) {
             LOG.info("stdio transport is disabled; no MCP messages are read or written");
             return;

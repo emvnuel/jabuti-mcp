@@ -62,9 +62,10 @@ is an unexpected failure and receives the tool's default code.
 _Avoid_: exception, throwable
 
 **Prompt**:
-An MCP feature registered at startup like tools but per deployment, not
-per source: `explore_database` and `er_diagram`. An optional `source` argument
-disambiguates when several sources exist.
+An MCP feature declared with `@Prompt` — per deployment, not per source,
+unlike the programmatically registered tools: `explore_database` and
+`er_diagram`. An optional `source` argument disambiguates when several
+sources exist.
 _Avoid_: template, workflow
 
 **Database info**:

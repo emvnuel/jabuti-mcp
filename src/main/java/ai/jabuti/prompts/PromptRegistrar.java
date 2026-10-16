@@ -86,10 +86,14 @@ public class PromptRegistrar {
     /**
      * Tells the model which source to use: the named one, the only one, or the
      * list to choose from when several are configured.
+     *
+     * <p>{@code args} may be {@code null} when the client sends no arguments
+     * for an optional prompt argument; it is treated like an empty map.
      */
     private String sourceGuidance(Map<String, String> args) {
         List<SourceEntry> sources = datasourceManager.config().sources();
-        String requested = args.get("source");
+        Map<String, String> arguments = args == null ? Map.of() : args;
+        String requested = arguments.get("source");
         if (requested != null && !requested.isBlank()) {
             boolean known = sources.stream().anyMatch(source -> source.id().equals(requested));
             if (known) {
